@@ -2,18 +2,7 @@
 
 This repository contains the analysis of solar data from various countries, focusing on data profiling, cleaning, and exploratory data analysis.
 
-## Project Structure
-```
-├── .vscode/              # VSCode settings
-├── .github/              # GitHub Actions workflows
-├── src/                  # Source code
-├── notebooks/            # Jupyter notebooks for analysis
-├── tests/                # Unit tests
-├── scripts/              # Utility scripts
-├── .gitignore           # Git ignore file
-├── requirements.txt      # Python dependencies
-└── README.md            # This file
-```
+
 
 ## Setup Instructions
 
