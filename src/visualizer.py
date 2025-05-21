@@ -1,91 +1,264 @@
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px
-from windrose import WindroseAxes
-from typing import Dict, List, Tuple
+"""
+Data visualization module for solar data analysis.
+"""
+from typing import Dict, List, Optional, Tuple, Union
 import pandas as pd
 import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import logging
 
-class Visualizer:
-    """Class for creating various visualizations of solar data."""
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+class VisualizationError(Exception):
+    """Custom exception for visualization errors."""
+    pass
+
+class SolarDataVisualizer:
+    """
+    A class for creating visualizations of solar data.
     
-    def __init__(self):
-        """Initialize the Visualizer with default style settings."""
-        plt.style.use('seaborn')
-        sns.set_palette('husl')
-        
-    def plot_time_series(self, time_series: Dict[str, pd.Series], 
-                        figsize: Tuple[int, int] = (15, 10)) -> None:
+    Attributes:
+        combined_df (pd.DataFrame): Combined data from all countries
+        country_dfs (Dict[str, pd.DataFrame]): Dictionary of country-specific data
+    """
+    
+    def __init__(self, combined_df: pd.DataFrame, country_dfs: Dict[str, pd.DataFrame]):
         """
-        Plot multiple time series in a grid.
+        Initialize the SolarDataVisualizer.
         
         Args:
-            time_series (Dict[str, pd.Series]): Dictionary of time series data
-            figsize (Tuple[int, int]): Figure size
-        """
-        n_plots = len(time_series)
-        n_cols = min(2, n_plots)
-        n_rows = (n_plots + 1) // 2
-        
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
-        axes = axes.ravel()
-        
-        for idx, (name, series) in enumerate(time_series.items()):
-            series.plot(ax=axes[idx], title=f'{name} over Time')
+            combined_df: Combined DataFrame with all countries' data
+            country_dfs: Dictionary of individual country DataFrames
             
-        plt.tight_layout()
-        plt.show()
-        
-    def plot_correlation_heatmap(self, correlation_matrix: pd.DataFrame, 
-                               figsize: Tuple[int, int] = (10, 8)) -> None:
+        Raises:
+            VisualizationError: If data validation fails
         """
-        Plot correlation heatmap.
+        self.combined_df = combined_df
+        self.country_dfs = country_dfs
+        self._validate_data()
+    
+    def _validate_data(self) -> None:
+        """
+        Validate the input data.
+        
+        Raises:
+            VisualizationError: If data validation fails
+        """
+        required_columns = ['Country', 'GHI', 'DNI', 'DHI', 'Tamb', 'WS', 'RH']
+        missing_cols = set(required_columns) - set(self.combined_df.columns)
+        
+        if missing_cols:
+            raise VisualizationError(f"Missing required columns: {missing_cols}")
+        
+        if not all(country in self.country_dfs for country in self.combined_df['Country'].unique()):
+            raise VisualizationError("Missing country data in country_dfs")
+    
+    def create_comparative_boxplots(self) -> go.Figure:
+        """
+        Create box plots comparing key variables across countries.
+        
+        Returns:
+            Plotly figure object
+            
+        Raises:
+            VisualizationError: If visualization fails
+        """
+        try:
+            fig = make_subplots(rows=2, cols=2,
+                              subplot_titles=('GHI by Country', 'Temperature by Country',
+                                            'Wind Speed by Country', 'Humidity by Country'))
+            
+            fig.add_trace(go.Box(x=self.combined_df['Country'], y=self.combined_df['GHI'],
+                                name='GHI'), row=1, col=1)
+            fig.add_trace(go.Box(x=self.combined_df['Country'], y=self.combined_df['Tamb'],
+                                name='Temperature'), row=1, col=2)
+            fig.add_trace(go.Box(x=self.combined_df['Country'], y=self.combined_df['WS'],
+                                name='Wind Speed'), row=2, col=1)
+            fig.add_trace(go.Box(x=self.combined_df['Country'], y=self.combined_df['RH'],
+                                name='Humidity'), row=2, col=2)
+            
+            fig.update_layout(height=800, title_text="Comparative Analysis of Key Variables")
+            logger.info("Successfully created comparative boxplots")
+            return fig
+            
+        except Exception as e:
+            raise VisualizationError(f"Error creating comparative boxplots: {str(e)}")
+    
+    def create_distribution_plots(self) -> go.Figure:
+        """
+        Create distribution plots for key variables.
+        
+        Returns:
+            Plotly figure object
+            
+        Raises:
+            VisualizationError: If visualization fails
+        """
+        try:
+            fig = make_subplots(rows=2, cols=2,
+                              subplot_titles=('GHI Distribution', 'Temperature Distribution',
+                                            'Wind Speed Distribution', 'Humidity Distribution'))
+            
+            for country, df in self.country_dfs.items():
+                fig.add_trace(go.Violin(x=[country]*len(df), y=df['GHI'],
+                                      name=f'{country} GHI'), row=1, col=1)
+                fig.add_trace(go.Violin(x=[country]*len(df), y=df['Tamb'],
+                                      name=f'{country} Temp'), row=1, col=2)
+                fig.add_trace(go.Violin(x=[country]*len(df), y=df['WS'],
+                                      name=f'{country} WS'), row=2, col=1)
+                fig.add_trace(go.Violin(x=[country]*len(df), y=df['RH'],
+                                      name=f'{country} RH'), row=2, col=2)
+            
+            fig.update_layout(height=800, title_text="Distribution Analysis Across Countries")
+            logger.info("Successfully created distribution plots")
+            return fig
+            
+        except Exception as e:
+            raise VisualizationError(f"Error creating distribution plots: {str(e)}")
+    
+    def create_correlation_heatmaps(self) -> Dict[str, go.Figure]:
+        """
+        Create correlation heatmaps for each country.
+        
+        Returns:
+            Dictionary of Plotly figure objects
+            
+        Raises:
+            VisualizationError: If visualization fails
+        """
+        try:
+            variables = ['GHI', 'DNI', 'DHI', 'Tamb', 'WS', 'RH']
+            heatmaps = {}
+            
+            for country, df in self.country_dfs.items():
+                corr_matrix = df[variables].corr()
+                fig = go.Figure(data=go.Heatmap(
+                    z=corr_matrix.values,
+                    x=corr_matrix.columns,
+                    y=corr_matrix.columns,
+                    colorscale='RdBu',
+                    zmin=-1, zmax=1
+                ))
+                fig.update_layout(title=f'{country} Correlation Heatmap')
+                heatmaps[country] = fig
+            
+            logger.info("Successfully created correlation heatmaps")
+            return heatmaps
+            
+        except Exception as e:
+            raise VisualizationError(f"Error creating correlation heatmaps: {str(e)}")
+    
+    def create_seasonal_plots(self) -> go.Figure:
+        """
+        Create seasonal pattern plots.
+        
+        Returns:
+            Plotly figure object
+            
+        Raises:
+            VisualizationError: If visualization fails
+        """
+        try:
+            if 'Month' not in self.combined_df.columns:
+                raise VisualizationError("Month column not found in data")
+            
+            fig = make_subplots(rows=2, cols=2,
+                              subplot_titles=('GHI by Month', 'Temperature by Month',
+                                            'Wind Speed by Month', 'Humidity by Month'))
+            
+            for country, df in self.country_dfs.items():
+                monthly_avg = df.groupby('Month').agg({
+                    'GHI': 'mean',
+                    'Tamb': 'mean',
+                    'WS': 'mean',
+                    'RH': 'mean'
+                }).reset_index()
+                
+                fig.add_trace(go.Scatter(x=monthly_avg['Month'], y=monthly_avg['GHI'],
+                                       name=f'{country} GHI'), row=1, col=1)
+                fig.add_trace(go.Scatter(x=monthly_avg['Month'], y=monthly_avg['Tamb'],
+                                       name=f'{country} Temp'), row=1, col=2)
+                fig.add_trace(go.Scatter(x=monthly_avg['Month'], y=monthly_avg['WS'],
+                                       name=f'{country} WS'), row=2, col=1)
+                fig.add_trace(go.Scatter(x=monthly_avg['Month'], y=monthly_avg['RH'],
+                                       name=f'{country} RH'), row=2, col=2)
+            
+            fig.update_layout(height=800, title_text="Seasonal Patterns Across Countries")
+            logger.info("Successfully created seasonal plots")
+            return fig
+            
+        except Exception as e:
+            raise VisualizationError(f"Error creating seasonal plots: {str(e)}")
+    
+    def create_diurnal_plots(self) -> go.Figure:
+        """
+        Create diurnal pattern plots.
+        
+        Returns:
+            Plotly figure object
+            
+        Raises:
+            VisualizationError: If visualization fails
+        """
+        try:
+            if 'Hour' not in self.combined_df.columns:
+                raise VisualizationError("Hour column not found in data")
+            
+            fig = make_subplots(rows=2, cols=2,
+                              subplot_titles=('GHI by Hour', 'Temperature by Hour',
+                                            'Wind Speed by Hour', 'Humidity by Hour'))
+            
+            for country, df in self.country_dfs.items():
+                hourly_avg = df.groupby('Hour').agg({
+                    'GHI': 'mean',
+                    'Tamb': 'mean',
+                    'WS': 'mean',
+                    'RH': 'mean'
+                }).reset_index()
+                
+                fig.add_trace(go.Scatter(x=hourly_avg['Hour'], y=hourly_avg['GHI'],
+                                       name=f'{country} GHI'), row=1, col=1)
+                fig.add_trace(go.Scatter(x=hourly_avg['Hour'], y=hourly_avg['Tamb'],
+                                       name=f'{country} Temp'), row=1, col=2)
+                fig.add_trace(go.Scatter(x=hourly_avg['Hour'], y=hourly_avg['WS'],
+                                       name=f'{country} WS'), row=2, col=1)
+                fig.add_trace(go.Scatter(x=hourly_avg['Hour'], y=hourly_avg['RH'],
+                                       name=f'{country} RH'), row=2, col=2)
+            
+            fig.update_layout(height=800, title_text="Diurnal Patterns Across Countries")
+            logger.info("Successfully created diurnal plots")
+            return fig
+            
+        except Exception as e:
+            raise VisualizationError(f"Error creating diurnal plots: {str(e)}")
+    
+    def save_figures(self, figures: Dict[str, go.Figure], output_dir: Union[str, Path]) -> None:
+        """
+        Save figures to files.
         
         Args:
-            correlation_matrix (pd.DataFrame): Correlation matrix
-            figsize (Tuple[int, int]): Figure size
+            figures: Dictionary of figure names and Plotly figure objects
+            output_dir: Directory to save figures to
+            
+        Raises:
+            VisualizationError: If saving fails
         """
-        plt.figure(figsize=figsize)
-        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0)
-        plt.title('Correlation Heatmap')
-        plt.show()
-        
-    def plot_wind_rose(self, wind_direction: np.ndarray, wind_speed: np.ndarray) -> None:
-        """
-        Plot wind rose.
-        
-        Args:
-            wind_direction (np.ndarray): Wind direction data
-            wind_speed (np.ndarray): Wind speed data
-        """
-        ax = WindroseAxes.from_ax()
-        ax.bar(wind_direction, wind_speed, normed=True, opening=0.8, edgecolor='white')
-        ax.set_legend()
-        plt.title('Wind Rose Plot')
-        plt.show()
-        
-    def plot_temperature_humidity(self, data: pd.DataFrame) -> None:
-        """
-        Create bubble chart for temperature, GHI, and humidity relationship.
-        
-        Args:
-            data (pd.DataFrame): DataFrame containing Tamb, GHI, and RH columns
-        """
-        fig = px.scatter(data, x='Tamb', y='GHI', size='RH',
-                        title='Temperature vs GHI with Relative Humidity',
-                        labels={'Tamb': 'Ambient Temperature',
-                               'GHI': 'Global Horizontal Irradiance',
-                               'RH': 'Relative Humidity'})
-        fig.show()
-        
-    def plot_cleaning_impact(self, cleaning_stats: pd.DataFrame) -> None:
-        """
-        Plot cleaning impact on module performance.
-        
-        Args:
-            cleaning_stats (pd.DataFrame): Statistics by cleaning status
-        """
-        cleaning_stats.plot(kind='bar', title='Module Performance by Cleaning Status')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.show() 
+        try:
+            output_dir = Path(output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            for name, fig in figures.items():
+                output_path = output_dir / f"{name}.html"
+                fig.write_html(str(output_path))
+            
+            logger.info(f"Successfully saved figures to {output_dir}")
+            
+        except Exception as e:
+            raise VisualizationError(f"Error saving figures: {str(e)}") 
