@@ -1,61 +1,87 @@
-# Solar Challenge Week 1
+# Solar Data Analysis Project
 
-This repository contains the analysis of solar data from various countries, focusing on data profiling, cleaning, and exploratory data analysis.
+## Overview
+This project analyzes solar data from Benin, focusing on various aspects of solar panel performance, environmental conditions, and their relationships. The analysis is structured in a modular, object-oriented manner to ensure maintainability and reusability.
 
+## Project Structure
+```
+solar-challenge-week1/
+├── data/                  # Data directory
+│   └── benin_solar.csv    # Raw solar data
+├── notebooks/             # Jupyter notebooks
+│   └── benin_eda.ipynb    # Exploratory data analysis
+├── src/                   # Source code
+│   ├── data_loader.py     # Data loading and inspection
+│   ├── data_analyzer.py   # Data analysis functions
+│   └── visualizer.py      # Visualization utilities
+├── tests/                 # Test files
+└── requirements.txt       # Project dependencies
+```
 
+## Features
+- **Data Loading and Inspection**: Efficient loading and initial analysis of solar data
+- **Time Series Analysis**: Analysis of solar irradiance and temperature patterns
+- **Outlier Detection**: Identification of anomalies in key measurements
+- **Cleaning Impact Analysis**: Assessment of panel cleaning effects on performance
+- **Wind Analysis**: Wind rose plots and wind pattern analysis
+- **Temperature and Humidity Analysis**: Study of environmental effects on performance
 
-## Setup Instructions
-
+## Installation
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/solar-challenge-week1.git
-   cd solar-challenge-week1
-   ```
+```bash
+git clone https://github.com/yathrib-04/solar-challenge-week1.git
+cd solar-challenge-week1
+```
 
-2. Create and activate a virtual environment:
-   ```bash
-   # Windows
-   python -m venv venv
-   .\venv\Scripts\activate
-
-   # Linux/Mac
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
+1. Start Jupyter Notebook:
+```bash
+jupyter notebook
+```
 
-1. Navigate to the `notebooks` directory
-2. Launch Jupyter Notebook:
-   ```bash
-   jupyter notebook
-   ```
-3. Open the relevant country's EDA notebook (e.g., `benin_eda.ipynb`)
+2. Open `notebooks/benin_eda.ipynb` to run the analysis
 
-## Data
+## Code Organization
+The project follows a modular, object-oriented design:
 
-The data directory is ignored by git. To work with the notebooks:
-1. Download the required dataset
-2. Place it in a `data/` directory in the project root
-3. Follow the analysis in the corresponding notebook
+### DataLoader Class
+- Handles data loading and initial inspection
+- Provides basic dataset information and statistics
+- Manages data validation and preprocessing
+
+### DataAnalyzer Class
+- Performs various analyses on the solar data
+- Includes methods for outlier detection, time series analysis
+- Handles correlation analysis and environmental impact studies
+
+### Visualizer Class
+- Creates various visualizations of the analysis results
+- Supports time series plots, correlation heatmaps
+- Generates wind rose plots and environmental relationship charts
+
+## Progress Documentation
+### Week 1
+- Implemented basic data loading and inspection
+- Created modular analysis framework
+- Developed initial visualizations
+- Established project structure and documentation
+
+### Next Steps
+- Implement additional analysis methods
+- Add more comprehensive error handling
+- Enhance visualization capabilities
+- Add unit tests for core functionality
 
 ## Contributing
-
-1. Create a new branch for your work:
-   ```bash
-   git checkout -b feature-name
-   ```
-2. Make your changes and commit them
-3. Push to your branch and create a Pull Request
+Feel free to submit issues and enhancement requests!
 
 ## License
-
-MIT License
+[Your chosen license]
 
 ```bash
 git clone https://github.com/yathrib-04/solar-challenge-week1.git
